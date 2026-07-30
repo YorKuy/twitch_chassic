@@ -53,6 +53,8 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Motor_Lib/DM.cpp
     Motor_Lib/RM.cpp
     Motor_Lib/RMD.cpp
+    App_Lib/app_chassis.cpp
+    App_Lib/main.cpp
     RM2023_Lib_V1.2/CP_System.c
     RM2023_Lib_V1.2/RM_Lib.cpp
 )
@@ -64,11 +66,14 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     Motor_Lib
     RM2023_Lib_V1.2
     App_Lib
+    IMU
+    CH010
 )
 
 # Add project symbols (macros)
 target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined symbols
+    TWITCH_CHASSIC_USE_CPP_MAIN
 )
 
 # Remove wrong libob.a library dependency when using cpp files

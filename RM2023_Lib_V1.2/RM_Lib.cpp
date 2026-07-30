@@ -152,6 +152,67 @@ void MOTOR_DiPan::ML_Data_Deal(float lx,float ly,float lp,int MAX_rate)
 	this->ML.hz=hz_per*Y_per*MAX_rate*P_per;
 }
 
+/*************************************************** Quan Xiang Lun  ******************************************************/
+
+MOTOR_QXL_DiPan::MOTOR_QXL_DiPan(void)
+{
+	this->QXL.qz = 0;
+	this->QXL.qy = 0;
+	this->QXL.hz = 0;
+	this->QXL.hy = 0;
+}
+
+static float Q_MAX(float A,float B,float C,float D)
+{
+	A=A>B?A:B;
+	A=A>C?A:C;
+	A=A>D?A:D;
+	return A;
+}
+
+void MOTOR_QXL_DiPan::QXL_Data_Deal(float forward,float right,float turn,float angle,int MAX_rate)
+{
+	float body_forward,body_right;
+	float qz_in,qy_in,hz_in,hy_in;
+	float raw_max,input_max,scale;
+
+	if(MAX_rate <= 0)
+	{
+		this->QXL.qz=0;
+		this->QXL.qy=0;
+		this->QXL.hz=0;
+		this->QXL.hy=0;
+		return;
+	}
+
+	body_forward = forward * cosf(angle) - right * sinf(angle);
+	body_right = forward * sinf(angle) + right * cosf(angle);
+
+	qz_in = -body_forward + body_right - turn;
+	hz_in = body_forward - body_right - turn;
+	hy_in = -body_forward - body_right - turn;
+	qy_in = body_forward + body_right - turn;
+
+	raw_max = Q_MAX(fabsf(qz_in),fabsf(qy_in),fabsf(hz_in),fabsf(hy_in));
+	input_max = Q_MAX(fabsf(forward),fabsf(right),fabsf(turn),0.0f);
+
+	if(raw_max <= 0.0f || input_max <= 0.0f)
+	{
+		this->QXL.qz=0;
+		this->QXL.qy=0;
+		this->QXL.hz=0;
+		this->QXL.hy=0;
+		return;
+	}
+
+	scale = input_max / 660.0f * MAX_rate / raw_max;
+
+	this->QXL.qz = qz_in * scale;
+	this->QXL.qy = qy_in * scale;
+	this->QXL.hz = hz_in * scale;
+	this->QXL.hy = hy_in * scale;
+}
+
 
 
 /***************************************Duo Lun************************************************************************/

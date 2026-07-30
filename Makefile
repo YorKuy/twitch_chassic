@@ -7,7 +7,10 @@ HEX := $(BUILD_DIR)/$(PROJECT).hex
 BIN := $(BUILD_DIR)/$(PROJECT).bin
 ASM := $(BUILD_DIR)/$(PROJECT).asm
 
-OPENOCD_CFG ?= openocd.cfg
+PYOCD ?= python3 -m pyocd
+PYOCD_TARGET ?= stm32f405rgtx
+PYOCD_FREQ ?= 1MHz
+PYOCD_PACK ?= $(HOME)/.local/share/pyocd/packs/Keil.STM32F4xx_DFP.3.1.1.pack
 
 .PHONY: all configure build clean size hex bin asm artifacts flash erase reset release flash-release
 
@@ -34,16 +37,13 @@ asm: build
 artifacts: build hex bin size
 
 flash: artifacts
-	openocd -f $(OPENOCD_CFG) \
-		-c "init; reset halt; flash write_image erase $(ELF); verify_image $(ELF); reset run; exit"
+	$(PYOCD) load --pack $(PYOCD_PACK) -t $(PYOCD_TARGET) -f $(PYOCD_FREQ) -e chip $(ELF)
 
 erase:
-	openocd -f $(OPENOCD_CFG) \
-		-c "init; reset halt; stm32f4x mass_erase 0; reset run; exit"
+	$(PYOCD) erase --pack $(PYOCD_PACK) -t $(PYOCD_TARGET) -f $(PYOCD_FREQ) --chip
 
 reset:
-	openocd -f $(OPENOCD_CFG) \
-		-c "init; reset run; exit"
+	$(PYOCD) reset --pack $(PYOCD_PACK) -t $(PYOCD_TARGET) -f $(PYOCD_FREQ)
 
 clean:
 	rm -rf build

@@ -27,6 +27,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "app_chassis.h"
 
 /* USER CODE END Includes */
 
@@ -66,6 +67,7 @@ void SystemClock_Config(void);
   * @brief  The application entry point.
   * @retval int
   */
+#ifndef TWITCH_CHASSIC_USE_CPP_MAIN
 int main(void)
 {
 
@@ -106,6 +108,7 @@ int main(void)
   MX_TIM8_Init();
   MX_UART5_Init();
   /* USER CODE BEGIN 2 */
+  App_Chassis_Init();
 
   /* USER CODE END 2 */
 
@@ -113,12 +116,14 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+    App_Chassis_Loop();
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
 }
+#endif
 
 /**
   * @brief System Clock Configuration
@@ -166,6 +171,27 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+#ifndef TWITCH_CHASSIC_USE_CPP_MAIN
+void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan)
+{
+  App_Chassis_CAN1_RxFifo0Callback(hcan);
+}
+
+void HAL_CAN_RxFifo1MsgPendingCallback(CAN_HandleTypeDef *hcan)
+{
+  App_Chassis_CAN2_RxFifo1Callback(hcan);
+}
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+  App_Chassis_TIM_PeriodElapsedCallback(htim);
+}
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+  App_Chassis_UART_RxCpltCallback(huart);
+}
+#endif
 
 /* USER CODE END 4 */
 
