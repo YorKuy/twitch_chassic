@@ -25,6 +25,14 @@ typedef uint8_t u8;
 
 #define CHASSIC_TOTAL_OUTPUT_MAX 48000
 
+// CAN2 -> gimbal feed-forward frame:
+//   word 0: signed spin speed (wheel-mixer command units)
+//   word 1: PLAYER small-gyro enable
+//   word 2: sin(gimbal relative yaw) * 10000
+//   word 3: cos(gimbal relative yaw) * 10000
+#define CHASSIS_SPIN_FF_CAN_ID 0x116
+#define CHASSIS_SPIN_PHASE_SCALE 10000.0f
+
 #define XTL_RANDOM_SPEED_RATIO       0.10f
 #define XTL_RANDOM_UPDATE_PERIOD_MS  10U
 #define XTL_RANDOM_TARGET_MIN_MS     300U
@@ -32,7 +40,7 @@ typedef uint8_t u8;
 #define XTL_RANDOM_STEP_MIN          1.0f
 #define XTL_RANDOM_STEP_MAX          8.0f
 
-#define Motor_Yaw_front -1.95791f//1.12776f//-1.95791f//1.81122f // -1.95791f
+#define Motor_Yaw_front -2.0534f//1.12776f//-1.95791f//1.81122f // -1.95791f
 
 #define YAW_ERROR_MASK     (0x0001 << 0)
 #define YAW_BACK_FLAG_MASK (0x0001 << 1)
@@ -583,6 +591,29 @@ static void QXL_Field_Data_Deal(float forward, float right, float turn, int max_
   DP.QXL_Data_Deal(body_forward, body_right, turn, 0.0f, max_rate);
 }
 
+static bool Chassis_spin_feedforward_enabled(void)
+{
+  // Feed-forward is intentionally limited to PLAYER mode.  XTL_MODE is a
+  // separate operator mode and must not make the gimbal compensate unless
+  // the normal PLAYER-mode small gyro has explicitly been enabled.
+  return (YK_Mode == PLAYER_MODE && XTL_Flag);
+}
+
+static int16_t Chassis_spin_feedforward_speed(void)
+{
+  if (!Chassis_spin_feedforward_enabled())
+    return 0;
+
+  float signed_speed = XTL_RANDOM_SPEED_OUT;
+  // PLAYER_deal() uses the historical fixed positive spin direction.
+
+  if (signed_speed > 32767.0f)
+    signed_speed = 32767.0f;
+  else if (signed_speed < -32768.0f)
+    signed_speed = -32768.0f;
+  return (int16_t)signed_speed;
+}
+
 static void PLAYER_deal(void)
 {
   if (YK.Pressed_Check(KEY_PRESSED_SHIFT))
@@ -984,6 +1015,19 @@ void App_Chassis_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 
   if (htim == &htim5)
   {
+    // Publish speed and mechanical phase at 200 Hz.  The phase lets the
+    // gimbal use different feed-forward gains for the front and rear halves
+    // of one chassis rotation.
+    const bool spin_enabled = Chassis_spin_feedforward_enabled();
+    const int16_t spin_speed = Chassis_spin_feedforward_speed();
+    const int16_t spin_phase_sin = spin_enabled ?
+        (int16_t)(sin_theta * CHASSIS_SPIN_PHASE_SCALE) : 0;
+    const int16_t spin_phase_cos = spin_enabled ?
+        (int16_t)(cos_theta * CHASSIS_SPIN_PHASE_SCALE) : (int16_t)CHASSIS_SPIN_PHASE_SCALE;
+    CAN_Communicate.Send_RM(CHASSIS_SPIN_FF_CAN_ID, spin_speed,
+                            spin_enabled ? 1 : 0,
+                            spin_phase_sin, spin_phase_cos);
+
     static uint8_t CNC_flag = 1;
     if (CNC_flag)
     {

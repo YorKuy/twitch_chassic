@@ -7,10 +7,10 @@ HEX := $(BUILD_DIR)/$(PROJECT).hex
 BIN := $(BUILD_DIR)/$(PROJECT).bin
 ASM := $(BUILD_DIR)/$(PROJECT).asm
 
-PYOCD ?= python3 -m pyocd
-PYOCD_TARGET ?= stm32f405rgtx
+PYOCD ?= $(HOME)/.venvs/pyocd/bin/python -m pyocd
+PYOCD_TARGET ?= gd32f405rg
 PYOCD_FREQ ?= 1MHz
-PYOCD_PACK ?= $(HOME)/.local/share/pyocd/packs/Keil.STM32F4xx_DFP.3.1.1.pack
+PYOCD_PACK ?= $(HOME)/.local/share/cmsis-pack-manager/GigaDevice/GD32F4xx_DFP/3.0.3.pack
 
 .PHONY: all configure build clean size hex bin asm artifacts flash erase reset release flash-release
 
